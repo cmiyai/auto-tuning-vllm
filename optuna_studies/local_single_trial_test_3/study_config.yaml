@@ -1,0 +1,84 @@
+# Example study configuration with auto-generated study name
+study:
+  name: "local_single_trial_test_3"  # <- Comment out to use auto-generation
+  # Will auto-generate unique name like: study_123456
+  # No database - will use local SQLite storage in temp folder
+
+optimization:
+  # High-throughput optimization: Maximize token generation rate
+  # approach: "single_objective" or "multi_objective"
+  # objective:
+  #   metric: "output_tokens_per_second"  # Throughput optimization
+  #   direction: "maximize"
+  #   percentile: "mean"  # Use median for stable results
+  # # sampler: "botorch"
+  # n_trials: 200
+  preset: "high_throughput"
+  sampler: "botorch"
+  n_trials: 200
+  max_concurrent_trials: 2
+
+benchmark:
+  benchmark_type: "guidellm"
+  model: "RedHatAI/Qwen3-30B-A3B-FP8-dynamic" 
+  max_seconds: 300
+  dataset: null  # Use synthetic data
+  prompt_tokens: 10000   
+  output_tokens: 1000
+  rate: 10
+
+logging:
+  file_path: "/tmp/auto-tune-vllm-local-run/logs"  # Local temp folder
+  log_level: "INFO"
+
+parameters: # parameters to optimize
+  max_num_batched_tokens:
+    enabled: true
+    min: 1024
+    max: 32768 
+    step: 1024
+
+  gpu_memory_utilization:
+    enabled: true
+    min: 0.9
+    max: 0.95
+    step: 0.01
+
+  kv_cache_dtype:
+    enabled: true
+    options: ["fp8"]
+
+  block_size:
+    enabled: true
+    options: [8, 16, 32]
+
+  cuda_graph_sizes:
+    enabled: true
+    min: 8
+    max: 8192
+    step: 128
+
+  long_prefill_token_threshold:
+    enabled: true
+    options: [0, 256, 512, 1024, 2048, 4096, 8192, 1150]
+
+  max_num_partial_prefills:
+    enabled: true
+    options: [1, 2, 4, 8]
+
+  max_seq_len_to_capture: 
+    enabled: true
+    min: 4096
+    max: 16384
+    step: 1024
+
+  # Environment variables (sampled by Optuna) - identified by type: environment
+  # Can only be a list of options
+  VLLM_ATTENTION_BACKEND:
+    enabled: false
+    type: environment
+    options: ["FLASH_ATTN", "FLASHINFER"]
+
+static_environment_variables:
+  VLLM_USE_V1: "1"
+  VLLM_STARTUP_TIMEOUT: "900"  # 15 minutes timeout for vLLM server startup
