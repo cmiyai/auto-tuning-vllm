@@ -322,7 +322,7 @@ class GuideLLMBenchmark(BenchmarkProvider):
             "guidellm",
             "run",
             "--backend",
-            f"kind=openai_http,target={model_url},model={config.model}",
+            f"kind=openai_http,target={model_url},model={config.model},request_format={config.request_format}",
             "--tokenizer",
             f"kind=huggingface_auto,model={processor}",
             "--profile",
