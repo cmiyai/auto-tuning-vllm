@@ -322,13 +322,13 @@ class GuideLLMBenchmark(BenchmarkProvider):
             "guidellm",
             "run",
             "--backend",
-            f"kind=openai_http,url={model_url},model={config.model}",
+            f"kind=openai_http,target={model_url},model={config.model}",
             "--tokenizer",
-            f"kind=huggingface_auto,model={processor},trust_remote_code=true",
+            f"kind=huggingface_auto,model={processor}",
             "--profile",
             f"kind=concurrent,streams={config.rate}",
             "--constraint",
-            f"kind=max_duration,value={config.max_seconds}",
+            f"kind=max_duration,seconds={config.max_seconds}",
             "--output",
             f"kind=json,path={results_file}",
             "--disable-console",
@@ -339,7 +339,6 @@ class GuideLLMBenchmark(BenchmarkProvider):
                 f"kind=synthetic_text",
                 f"prompt_tokens={config.prompt_tokens}",
                 f"output_tokens={config.output_tokens}",
-                f"samples={config.samples}",
             ]
 
             if config.prompt_tokens_stdev is not None:
