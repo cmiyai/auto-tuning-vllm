@@ -315,66 +315,70 @@ class GuideLLMBenchmark(BenchmarkProvider):
     def _build_guidellm_command(
         self, model_url: str, config: BenchmarkConfig, results_file: str
     ) -> list[str]:
-        """Build GuideLLM command arguments."""
-        # Use processor if specified, otherwise default to model
+        """Build GuideLLM 0.7.x command arguments."""
         processor = config.processor if config.processor is not None else config.model
 
         cmd = [
             "guidellm",
-            "benchmark",
-            "--target",
-            model_url,
-            "--model",
-            config.model,
-            "--processor",
-            processor,
-            "--rate-type",
-            "concurrent",
-            "--max-seconds",
-            str(config.max_seconds),
-            "--rate",
-            str(config.rate),
-            "--output-path",
-            results_file,
-            "--processor-args",
-            '{"trust-remote-code":"true"}'
+            "run",
+            "--backend",
+            f"kind=openai_http,url={model_url},model={config.model}",
+            "--tokenizer",
+            f"kind=huggingface_auto,model={processor},trust_remote_code=true",
+            "--profile",
+            f"kind=concurrent,streams={config.rate}",
+            "--constraint",
+            f"kind=max_duration,value={config.max_seconds}",
+            "--output",
+            f"kind=json,path={results_file}",
+            "--disable-console",
         ]
 
-        # Add dataset or synthetic data configuration
         if config.use_synthetic_data:
-            # Build data JSON object - only include statistical parameters if specified
-            data_config = {
-                "prompt_tokens": config.prompt_tokens,
-                "output_tokens": config.output_tokens,
-                "samples": config.samples
-            }
+            data_parts = [
+                f"kind=synthetic_text",
+                f"prompt_tokens={config.prompt_tokens}",
+                f"output_tokens={config.output_tokens}",
+                f"samples={config.samples}",
+            ]
 
-            # Only add statistical distribution parameters if they were explicitly
-            # specified
             if config.prompt_tokens_stdev is not None:
-                data_config["prompt_tokens_stdev"] = config.prompt_tokens_stdev
+                data_parts.append(
+                    f"prompt_tokens_stdev={config.prompt_tokens_stdev}"
+                )
             if config.prompt_tokens_min is not None:
-                data_config["prompt_tokens_min"] = config.prompt_tokens_min
+                data_parts.append(
+                    f"prompt_tokens_min={config.prompt_tokens_min}"
+                )
             if config.prompt_tokens_max is not None:
-                data_config["prompt_tokens_max"] = config.prompt_tokens_max
+                data_parts.append(
+                    f"prompt_tokens_max={config.prompt_tokens_max}"
+                )
             if config.output_tokens_stdev is not None:
-                data_config["output_tokens_stdev"] = config.output_tokens_stdev
+                data_parts.append(
+                    f"output_tokens_stdev={config.output_tokens_stdev}"
+                )
             if config.output_tokens_min is not None:
-                data_config["output_tokens_min"] = config.output_tokens_min
+                data_parts.append(
+                    f"output_tokens_min={config.output_tokens_min}"
+                )
             if config.output_tokens_max is not None:
-                data_config["output_tokens_max"] = config.output_tokens_max
+                data_parts.append(
+                    f"output_tokens_max={config.output_tokens_max}"
+                )
 
-            cmd.extend(["--data", json.dumps(data_config)])
+            cmd.extend(["--data", ",".join(data_parts)])
         else:
             if config.dataset.startswith("hf://"):
-                # HuggingFace dataset
-                dataset_name = config.dataset[5:]  # Remove "hf://" prefix
-                cmd.extend(["--data-type", "huggingface", "--dataset", dataset_name])
+                dataset_name = config.dataset[5:]
+                cmd.extend([
+                    "--data",
+                    f"kind=huggingface,dataset={dataset_name}",
+                ])
             else:
-                # Local file
                 if not os.path.exists(config.dataset):
                     raise FileNotFoundError(f"Dataset file not found: {config.dataset}")
-                cmd.extend(["--data-type", "file", "--dataset", config.dataset])
+                cmd.extend(["--data", f"kind=text_file,path={config.dataset}"])
         return cmd
 
     def _parse_guidellm_results(self, data: dict) -> Dict[str, Any]:
